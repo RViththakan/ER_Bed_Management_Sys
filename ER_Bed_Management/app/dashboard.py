@@ -4,7 +4,6 @@ import requests
 import plotly.express as px
 from datetime import datetime
 import time
-import plotly.graph_objects as go
 
 st.set_page_config(page_title="ER Operations Command", layout="wide")
 API_URL = "http://127.0.0.1:8000"
@@ -65,71 +64,14 @@ with tab1:
     else: st.info("No active patients.")
 
 with tab2:
-    if not df_p.empty:
-        # --- ROW 1: HEATMAP & PIE (Your Existing Charts) ---
+    if patients:
+        df_a = pd.DataFrame(patients)
         col1, col2 = st.columns(2)
-        fig_heat = px.density_heatmap(df_p, x="hospital", y="ctas_level", 
-                                      title="🔥 System Load Intensity", 
-                                      color_continuous_scale="Viridis")
+        fig_heat = px.density_heatmap(df_a, x="hospital", y="ctas_level", title="System Load Intensity", color_continuous_scale="Viridis")
         col1.plotly_chart(fig_heat, use_container_width=True)
-        
-        fig_pie = px.pie(df_p, names="condition", title="🍕 Current Condition Mix", hole=0.4)
+        fig_pie = px.pie(df_a, names="condition", title="Current Condition Mix", hole=0.4)
         col2.plotly_chart(fig_pie, use_container_width=True)
 
-        st.divider()
-
-        # --- ROW 2: ADVANCED VISUALS ---
-        col3, col4 = st.columns(2)
-
-        # 1. RADAR CHART: Hospital Stress Profile
-        # This compares hospitals across multiple metrics
-        radar_data = df_p.groupby('hospital').agg({
-            'est_wait_time': 'mean',
-            'age': 'count'  # Patient Volume
-        }).reset_index()
-        
-        fig_radar = go.Figure()
-        for _, row in radar_data.iterrows():
-            fig_radar.add_trace(go.Scatterpolar(
-                r=[row['est_wait_time'], row['age'] * 10, 50], # Sample metrics
-                theta=['Avg Wait Time', 'Patient Volume', 'Staff Availability'],
-                fill='toself',
-                name=row['hospital']
-            ))
-        fig_radar.update_layout(title="🕸️ Hospital Performance Profile", polar=dict(radialaxis=dict(visible=True, range=[0, 100])))
-        col3.plotly_chart(fig_radar, use_container_width=True)
-
-        # 2. BOX PLOT: Wait Time Distribution by Triage
-        # Proves that CTAS 1 (Critical) has lower wait times than CTAS 3
-        fig_box = px.box(df_p, x="ctas_level", y="est_wait_time", color="ctas_level",
-                         title="📦 Wait Time Distribution by Triage Level",
-                         labels={"ctas_level": "Triage Level", "est_wait_time": "Wait Time (min)"})
-        col4.plotly_chart(fig_box, use_container_width=True)
-
-        st.divider()
-
-        # --- ROW 3: PATIENT FLOW (SANKEY) ---
-        # This shows how patients move from Regions to Hospitals
-        st.subheader("🌊 Regional Patient Flow")
-        
-        # Prepare data for Sankey
-        all_regions = df_p['region'].unique().tolist()
-        all_hospitals = df_p['hospital'].unique().tolist()
-        label_list = all_regions + all_hospitals
-        
-        source = df_p['region'].apply(lambda x: label_list.index(x))
-        target = df_p['hospital'].apply(lambda x: label_list.index(x))
-        
-        fig_sankey = go.Figure(data=[go.Sankey(
-            node = dict(pad = 15, thickness = 20, line = dict(color = "black", width = 0.5),
-                label = label_list, color = "blue"),
-            link = dict(source = source, target = target, value = [1]*len(df_p))
-        )])
-        fig_sankey.update_layout(title_text="Patient Movement: Region ➡️ Hospital", font_size=12)
-        st.plotly_chart(fig_sankey, use_container_width=True)
-
-    else:
-        st.info("No data available for analytics. Please admit patients first.")
 with tab3:
     st.subheader("🧹 Fair-Labor Sanitation Queue")
     if staff_data:
