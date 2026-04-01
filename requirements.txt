@@ -1,0 +1,9 @@
+streamlit
+pandas
+requests
+plotly
+fastapi
+uvicorn
+joblib
+scikit-learn
+anyio
